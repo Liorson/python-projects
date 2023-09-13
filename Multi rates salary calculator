@@ -1,0 +1,151 @@
+#### This is a multi rates and conditions salary calculater
+#### In this script we take an exel file conataining three importatnt columns: 
+#### 1) start date (23/07/2023 Fri) 
+#### 2) start time (07:30:00)
+#### 3) end time (15:30:00)
+
+#### This code will take the start time and end time and will calculate how much hours you worked this month
+#### this will calculate it by the rate agreed in advance.
+#### For examle in this code at the moment we have 4 different rates and seperate hours for both Friday and Saturday.
+#### THE RATES:
+#### Regular day:
+#### 08:00 - 17:00 = 100% rate
+#### 17:00 - 22:00 = 125% rate
+#### 22:00 - 08:00 = 146% rate
+#### Friday:
+#### 08:00 - 17:00 = 100% rate
+#### 17:00 - 00:00 = 150% rate
+#### Saturday:
+#### 00:00 - 18:00 = 150% rate
+#### 18:00 - 22:00 = 125% rate 
+#### 22:00 - 00:00 = 146% rate
+
+#### Syntax- This script can process end-time columns data when its 00:00, when in the exel its this option change it to 23:59
+#### *Please make sure to specify the correct file path for the exel file | you can move the exel file into the python directoy 
+#### and removing the rest of the path by leaving only the fiel name
+
+##importing pandas and datatime moudles
+import pandas as pd
+from datetime import datetime
+
+# Load data from Excel file
+excel_file = 'test2.xlsx'  # Replace with your Excel file path
+df = pd.read_excel(excel_file, engine='openpyxl')
+
+# Function to validate the time format (HH:MM)
+def is_valid_time(time_str):
+    try:
+        datetime.strptime(time_str, "%H:%M")
+        return True
+    except ValueError:
+        return False
+
+# Initialize variables to track hours worked at each rate  
+hours_rate_8_to_17 = 0
+hours_rate_17_to_22 = 0
+hours_rate_22_to_8 = 0
+friday_hours_rate_00_to_8 = 0
+friday_hours_rate_8_to_17 = 0
+friday_hours_rate_17_to_00 = 0
+shabbath_hours_rate_00_to_18 = 0
+shabbath_hours_rate_18_to_22 = 0
+shabbath_hours_rate_22_to_00 = 0
+
+# Iterate through each row and calculate hours worked at each rate
+for index, row in df.iterrows():
+    start_time_str = row['start time'].strftime('%H:%M')
+    end_time_str = row['end time'].strftime('%H:%M')
+    time_range = f"{start_time_str} - {end_time_str}"
+
+    start_str, end_str = time_range.split(" - ")
+    start_date = row['start date'].split()[-1]  # Extract the last part of the 'start date'
+ 
+
+    # Check if both start and end times are valid
+    if is_valid_time(start_str) and is_valid_time(end_str):
+        # Convert start and end times to datetime objects
+        start_time = datetime.strptime(start_str, "%H:%M")
+        end_time = datetime.strptime(end_str, "%H:%M")
+
+        # Define hourly rates for regular time periods
+        regular_rate_1 = (datetime.strptime("08:00", "%H:%M"), datetime.strptime("17:00", "%H:%M"))
+        regular_rate_2 = (datetime.strptime("17:00", "%H:%M"), datetime.strptime("22:00", "%H:%M"))
+        regular_rate_3_4 = [
+            (datetime.strptime("22:00", "%H:%M"), datetime.strptime("23:59", "%H:%M")),
+            (datetime.strptime("00:00", "%H:%M"), datetime.strptime("08:00", "%H:%M"))
+        ]
+
+        # Define hourly rates for different time periods on Friday
+        friday_rate_1 = (datetime.strptime("00:00", "%H:%M"), datetime.strptime("08:00", "%H:%M"))
+        friday_rate_2 = (datetime.strptime("08:00", "%H:%M"), datetime.strptime("17:00", "%H:%M"))
+        friday_rate_3 = (datetime.strptime("17:00", "%H:%M"), datetime.strptime("23:59", "%H:%M"))
+
+        # Define hourly rates for different time periods on Saturday
+        shabbath_rate_1 = (datetime.strptime("00:00", "%H:%M"), datetime.strptime("18:00", "%H:%M"))
+        shabbath_rate_2 = (datetime.strptime("18:00", "%H:%M"), datetime.strptime("22:00", "%H:%M"))
+        shabbath_rate_3 = (datetime.strptime("22:00", "%H:%M"), datetime.strptime("23:59", "%H:%M"))
+
+        # Function to calculate overlapping hours between two time periods
+        def calculate_overlap(start1, end1, start2, end2):
+            overlap_start = max(start1, start2)
+            overlap_end = min(end1, end2)
+            overlap = max(0, (overlap_end - overlap_start).total_seconds()) / 3600
+            return overlap
+
+        # Calculate hours worked at each rate for the current row
+        if start_date == 'Fri':
+            for rate in [friday_rate_1, friday_rate_2, friday_rate_3]:
+                overlap_hours = calculate_overlap(start_time, end_time, rate[0], rate[1])
+                if overlap_hours > 0:
+                    if rate == friday_rate_1:
+                        friday_hours_rate_00_to_8 += overlap_hours
+                    elif rate == friday_rate_2:
+                        friday_hours_rate_8_to_17 += overlap_hours
+                    elif rate == friday_rate_3:
+                        friday_hours_rate_17_to_00 += overlap_hours
+        elif start_date == 'Sat':
+            for rate in [shabbath_rate_1, shabbath_rate_2, shabbath_rate_3]:
+                overlap_hours = calculate_overlap(start_time, end_time, rate[0], rate[1])
+                if overlap_hours > 0:
+                    if rate == shabbath_rate_1:
+                        shabbath_hours_rate_00_to_18 += overlap_hours
+                    elif rate == shabbath_rate_2:
+                        shabbath_hours_rate_18_to_22 += overlap_hours
+                    elif rate == shabbath_rate_3:
+                        shabbath_hours_rate_22_to_00 += overlap_hours
+        else:
+            for rate in [regular_rate_1, regular_rate_2]:
+                overlap_hours = calculate_overlap(start_time, end_time, rate[0], rate[1])
+                if overlap_hours > 0:
+                    if rate == regular_rate_1:
+                        hours_rate_8_to_17 += overlap_hours
+                    elif rate == regular_rate_2:
+                        hours_rate_17_to_22 += overlap_hours
+            for rate in regular_rate_3_4:
+                overlap_hours = calculate_overlap(start_time, end_time, rate[0], rate[1])
+                if overlap_hours > 0:
+                    hours_rate_22_to_8 += overlap_hours
+
+# ...
+## Calculate the combined results
+combined_rate_1 = hours_rate_8_to_17 + friday_hours_rate_8_to_17
+combined_rate_3_4 = hours_rate_22_to_8 + friday_hours_rate_00_to_8
+combined_rate_125 = hours_rate_17_to_22 + shabbath_hours_rate_18_to_22
+combined_rate_146 = combined_rate_3_4 + shabbath_hours_rate_22_to_00
+combined_rate_150 = friday_hours_rate_17_to_00 + shabbath_hours_rate_00_to_18
+
+# Print the total hours worked at each rate category
+print(f"total 100% worked: {combined_rate_1:.2f} hours")
+print(f"total 125% worked: {combined_rate_125:.2f} hours")
+print(f"total 146% worked: {combined_rate_146:.2f} hours")
+print(f"total 150% worked: {combined_rate_150:.2f} hours")
+
+# Defining rates
+RATE100 = 42
+RATE125 = 52.5
+RATE146 = 61.32
+RATE150 = 63 
+#calculating the total month earnings
+total_money=combined_rate_1*RATE100+combined_rate_3_4*RATE125+combined_rate_146*RATE146+combined_rate_150+RATE150
+print("you earned this month ",total_money,"$")
+
