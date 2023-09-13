@@ -20,7 +20,7 @@
 #### 18:00 - 22:00 = 125% rate 
 #### 22:00 - 00:00 = 146% rate
 
-#### Syntax- This script can process end-time columns data when its 00:00, when in the exel its this option change it to 23:59
+#### Syntax- This script can't process end-time columns data when its 00:00, when in the exel its this option change it to 23:59
 #### *Please make sure to specify the correct file path for the exel file | you can move the exel file into the python directoy 
 #### and removing the rest of the path by leaving only the fiel name
 
